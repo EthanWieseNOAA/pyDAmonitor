@@ -1,0 +1,6 @@
+from bokeh.plotting import figure, show
+from bokeh.io import output_notebook
+from bokeh.models import HoverTool
+import numpy as np
+
+output_notebook()
