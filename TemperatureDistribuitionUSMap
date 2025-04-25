@@ -1,0 +1,78 @@
+%%time
+
+import folium
+import numpy as np
+
+%%time 
+
+# autoload external python modules if they changed
+%load_ext autoreload
+%autoreload 2
+# add ../funcs to the current path
+import sys, os
+sys.path.append(os.path.join(os.getcwd(), "../funcs")) 
+
+%%time
+
+# read data from netcdf files, save them to 'dataset'
+from jdiag import load_jdiag, get_jdiag_metadata, get_jdiag_data
+dataset = load_jdiag("../data/samples/mpasjedi/jdiag_aircar_t133.nc")
+
+data = get_jdiag_data(dataset, "airTemperature")
+
+%%time
+
+from base import query_data
+query_data(data)
+
+%time
+
+latitudes = data["latitude"]
+longitudes = data["longitude"]
+temperatures = data["oman"]
+stationIDs = data["stationIdentification"]
+
+for lat, lon, temp, stationID in zip(data["latitude"], data["longitude"], data["ombg"], data["stationIdentification"]):
+    if np.ma.is_masked(temp):
+        continue  # skip this row if temp is masked
+
+    popup_text = f"""
+        <b>Temp:</b> {float(temp):.2f} °C<br>
+        <b>Station ID:</b> {stationID}
+    """
+
+def get_color(temp):
+    if temp < -10:
+        return "#08306B"  # dark blue
+    elif temp < 0:
+        return "#4292C6"  # light blue
+    elif temp < 10:
+        return "#7FCDBB"  # cyan/teal
+    elif temp < 20:
+        return "#41AB5D"  # green
+    elif temp < 30:
+        return "#FEE391"  # yellow
+    elif temp < 35:
+        return "#F16913"  # orange
+    else:
+        return "#A50F15"  # red
+
+%%time
+
+m = folium.Map(location=[39.8283, -98.5795], zoom_start=4)
+
+%%time
+
+for lat, lon, temp in zip(latitudes, longitudes, temperatures):
+    if np.ma.is_masked(temp) or temp is np.ma.masked:
+        continue
+    color = get_color(float(temp))  # Get color based on temperature
+
+    folium.CircleMarker(
+        location=[lat, lon],
+        radius=1,
+        popup=folium.Popup(popup_text, max_width=250),
+        color=color,
+        fill=True,
+        fill_color=color
+    ).add_to(m)
